@@ -455,7 +455,7 @@ def build_pdf_report(patient_data, diagnostic_data):
 
         y_pos += 8
 
-    # 4. Clinical Recommendations & Action Protocol
+# 4. Clinical Recommendations & Action Protocol
     pdf.set_y(y_pos + 6)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(30, 41, 59)
@@ -469,7 +469,7 @@ def build_pdf_report(patient_data, diagnostic_data):
     pdf.set_xy(18, rec_box_y + 4)
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(15, 23, 42)
-    pdf.cell(40, 4, "Recommended Follow-up Window:")
+    pdf.cell(52, 4, "Recommended Follow-up Window:")  # Expanded width to prevent text overlap
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(6, 182, 212)
     pdf.cell(100, 4, meta["follow_up"], ln=True)
@@ -484,33 +484,25 @@ def build_pdf_report(patient_data, diagnostic_data):
     pdf.set_text_color(30, 41, 59)
     pdf.multi_cell(174, 4.5, meta["action"])
 
-    # 5. Technical Verification & Signature Area
+    # 5. Technical Verification Area (Sign-off signature block removed)
     sign_y = rec_box_y + 44
     pdf.set_xy(14, sign_y)
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(100, 116, 139)
-    pdf.cell(90, 4, "ALGORITHM VERIFICATION:")
-    pdf.cell(92, 4, "AUTHORIZED CLINICAL SIGN-OFF:", align="R", ln=True)
+    pdf.cell(182, 4, "ALGORITHM VERIFICATION:", ln=True)
 
     pdf.set_font("Helvetica", "", 7)
     pdf.set_text_color(71, 85, 105)
-    pdf.set_xy(14, sign_y + 5)
-    pdf.cell(90, 3.5, f"Engine: {model_source}", ln=True)
     pdf.set_x(14)
-    pdf.cell(90, 3.5, "Input Resolution: 224x224x3 (Normalized)", ln=True)
+    pdf.cell(182, 3.5, f"Engine: {model_source}", ln=True)
     pdf.set_x(14)
-    pdf.cell(90, 3.5, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}", ln=True)
-
-    # Signature line
-    pdf.set_draw_color(156, 163, 175)
-    pdf.line(140, sign_y + 18, 196, sign_y + 18)
-    pdf.set_xy(140, sign_y + 19)
-    pdf.set_font("Helvetica", "I", 7)
-    pdf.cell(56, 4, "Reviewing Ophthalmologist Signature", align="C")
+    pdf.cell(182, 3.5, "Input Resolution: 224x224x3 (Normalized)", ln=True)
+    pdf.set_x(14)
+    pdf.cell(182, 3.5, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}", ln=True)
 
     # Output to byte buffer
-    pdf_buffer = io.BytesIO()
-    pdf.output(pdf_buffer)
+    pdf_bytes = pdf.output()
+    pdf_buffer = io.BytesIO(pdf_bytes)
     pdf_buffer.seek(0)
     return pdf_buffer
 
@@ -611,22 +603,30 @@ def generate_pdf():
     """
     try:
         if request.is_json:
-            payload = request.get_json()
+            payload = request.get_json() or {}
         else:
-            payload = request.form.to_dict()
+            payload = request.form.to_dict() or {}
 
-        patient_data = payload.get("patient", {
-            "name": payload.get("name", "Anonymous Patient"),
-            "age": payload.get("age", "N/A"),
-            "gender": payload.get("gender", "Not Specified"),
-            "eye": payload.get("eye", "Not Specified")
-        })
+        # Safely extract patient dictionary
+        raw_patient = payload.get("patient", {})
+        if not isinstance(raw_patient, dict):
+            raw_patient = {}
 
-        # Parse probabilities if sent as serialized or nested
+        patient_data = {
+            "name": raw_patient.get("name") or payload.get("name") or "Anonymous Patient",
+            "age": raw_patient.get("age") or payload.get("age") or "N/A",
+            "gender": raw_patient.get("gender") or payload.get("gender") or "Not Specified",
+            "eye": raw_patient.get("eye") or payload.get("eye") or "Not Specified"
+        }
+
+        # Parse probabilities if sent as string or dictionary
         probabilities = payload.get("probabilities", {})
         if isinstance(probabilities, str):
             import json
-            probabilities = json.loads(probabilities)
+            try:
+                probabilities = json.loads(probabilities)
+            except Exception:
+                probabilities = {}
 
         diagnostic_data = {
             "prediction": payload.get("prediction", "Normal"),
@@ -641,7 +641,8 @@ def generate_pdf():
 
         pdf_stream = build_pdf_report(patient_data, diagnostic_data)
 
-        patient_slug = "".join(c for c in patient_data.get("name", "Report") if c.isalnum() or c in ("_", "-")).strip() or "Patient"
+        patient_name_str = str(patient_data.get("name", "Report"))
+        patient_slug = "".join(c for c in patient_name_str if c.isalnum() or c in ("_", "-")).strip() or "Patient"
         filename = f"VisionAI_Report_{patient_slug}.pdf"
 
         return send_file(
@@ -654,7 +655,6 @@ def generate_pdf():
     except Exception as e:
         logger.exception(f"Error compiling diagnostic PDF: {e}")
         return jsonify({"success": False, "error": f"Failed to generate PDF report: {str(e)}"}), 500
-
 
 # --------------------------------------------------------------------------
 # Main Execution Entrypoint
