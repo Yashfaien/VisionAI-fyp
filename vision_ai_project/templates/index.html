@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionAI - AI-Powered Eye Anomaly Detection & Report Generation</title>
+  <meta name="description"
+    content="Production-ready medical screening web application for retinal fundus anomaly classification and automated diagnostic PDF report generation using fine-tuned ResNet-50.">
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+    <div class="container-xl">
+      <a class="navbar-brand" href="#hero">
+        <span class="fs-4">👁️</span>
+        <span style="font-family: 'Outfit', sans-serif;">VisionAI</span>
+        <span class="brand-badge">FYP Clinical v1.0</span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+          <li class="nav-item">
+            <a class="nav-link active" href="#screeningTool"><i class="bi bi-cpu me-1"></i> Screening Tool</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#modelMetrics"><i class="bi bi-bar-chart-line me-1"></i> Model Metrics</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#clinicalConditions"><i class="bi bi-shield-check me-1"></i> Pathologies</a>
+          </li>
+          <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+            <a class="btn btn-sm btn-secondary-custom" href="https://github.com" target="_blank" rel="noopener">
+              <i class="bi bi-file-earmark-medical me-1"></i> Documentation
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="container-xl">
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section text-center">
+      <div class="hero-pill">
+        <span class="pulse-indicator"></span> Deep Transfer Learning ResNet-50 Pipeline
+      </div>
+      <h1 class="hero-title">
+        AI-Powered Retinal Anomaly Detection &<br>
+        <span class="gradient-text">Automated Diagnostic Reporting</span>
+      </h1>
+      <p class="hero-subtitle">
+        Empowering ophthalmic triaging with automated deep convolutional screening.
+        Detect and classify <strong>Cataract</strong>, <strong>Glaucoma</strong>, <strong>Diabetic Retinopathy</strong>,
+        and <strong>Normal</strong> retinal fundus scans in seconds with validated clinical precision.
+      </p>
+
+      <!-- Model Performance Highlights -->
+      <div class="hero-metrics">
+        <div class="metric-pill">
+          <span class="dot"></span>
+          <span>Architecture: <strong>ResNet-50</strong></span>
+        </div>
+        <div class="metric-pill">
+          <span class="dot" style="background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+          <span>Validation Accuracy: <strong>87.5%</strong></span>
+        </div>
+        <div class="metric-pill">
+          <span class="dot" style="background: #38bdf8; box-shadow: 0 0 8px #38bdf8;"></span>
+          <span>Testing Accuracy: <strong>87.3%</strong></span>
+        </div>
+        <div class="metric-pill">
+          <span class="dot" style="background: #f59e0b; box-shadow: 0 0 8px #f59e0b;"></span>
+          <span>Classes: <strong>4 Pathology Types</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error Alert Toast/Banner Container -->
+    <div id="alertContainer" class="my-3" style="display: none;"></div>
+
+    <!-- Diagnostic Workflow Container -->
+    <section id="screeningTool" class="mb-5">
+      <form id="diagnosticForm" enctype="multipart/form-data">
+        <div class="row g-4">
+
+          <!-- Step 1: Image Upload Card -->
+          <div class="col-lg-6">
+            <div class="custom-card h-100">
+              <div class="card-header-clean">
+                <h2 class="card-title-text">
+                  <span class="step-badge">1</span> Upload Retinal Fundus Scan
+                </h2>
+                <span class="text-muted small"><i class="bi bi-camera me-1"></i> Color Fundus (CFP)</span>
+              </div>
+
+              <!-- Drag-and-Drop Dropzone -->
+              <div id="dropzone" class="dropzone-container" tabindex="0" role="button"
+                aria-label="Drop retinal fundus image here or click to browse">
+                <input type="file" id="imageInput" name="image" accept="image/jpeg, image/png, image/jpg"
+                  class="d-none">
+                <div class="dropzone-icon-box">
+                  <i class="bi bi-cloud-arrow-up"></i>
+                </div>
+                <div class="dropzone-title">Drop your retinal fundus image here</div>
+                <div class="dropzone-subtitle">or <span class="text-info text-decoration-underline">browse from
+                    device</span></div>
+                <div class="dropzone-format-tags">
+                  <span class="format-tag">JPG</span>
+                  <span class="format-tag">JPEG</span>
+                  <span class="format-tag">PNG</span>
+                  <span class="format-tag">Max 16MB</span>
+                </div>
+              </div>
+
+              <!-- Image Preview Container -->
+              <div id="previewContainer" class="preview-container">
+                <img id="imagePreview" class="preview-image" alt="Retinal Fundus Preview">
+                <div class="preview-overlay">
+                  <div class="preview-meta">
+                    <span id="previewFilename"><i class="bi bi-file-image me-1"></i> fundus_sample.jpg</span>
+                    <small id="previewFilesize">1.4 MB</small>
+                  </div>
+                  <button type="button" id="removeImageBtn" class="btn btn-sm btn-outline-danger"
+                    title="Remove selected image">
+                    <i class="bi bi-trash3 me-1"></i> Remove
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-3 text-muted small">
+                <i class="bi bi-info-circle me-1 text-info"></i> Input images will be automatically cropped, resized to
+                (224, 224), and normalized to [0, 1] for neural inference.
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Patient Demographics Form -->
+          <div class="col-lg-6">
+            <div class="custom-card h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="card-header-clean">
+                  <h2 class="card-title-text">
+                    <span class="step-badge">2</span> Patient Demographics
+                  </h2>
+                  <span class="text-muted small"><i class="bi bi-person-vcard me-1"></i> Clinical Metadata</span>
+                </div>
+
+                <div class="row g-3">
+                  <!-- Patient Full Name -->
+                  <div class="col-md-8">
+                    <label for="patientName" class="form-label">
+                      <i class="bi bi-person"></i> Patient Full Name
+                    </label>
+                    <input type="text" class="form-control" id="patientName" name="name" placeholder="e.g. John Doe"
+                      required>
+                  </div>
+
+                  <!-- Patient Age -->
+                  <div class="col-md-4">
+                    <label for="patientAge" class="form-label">
+                      <i class="bi bi-calendar3"></i> Age
+                    </label>
+                    <input type="number" class="form-control" id="patientAge" name="age" min="1" max="120"
+                      placeholder="e.g. 54" required>
+                  </div>
+
+                  <!-- Patient Gender -->
+                  <div class="col-md-6">
+                    <label for="patientGender" class="form-label">
+                      <i class="bi bi-gender-ambiguous"></i> Gender
+                    </label>
+                    <select class="form-select" id="patientGender" name="gender" required>
+                      <option value="" disabled selected>Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <!-- Eye Examined -->
+                  <div class="col-md-6">
+                    <label for="patientEye" class="form-label">
+                      <i class="bi bi-eye"></i> Eye Examined
+                    </label>
+                    <select class="form-select" id="patientEye" name="eye" required>
+                      <option value="Left Eye (OS)">Left Eye (OS)</option>
+                      <option value="Right Eye (OD)">Right Eye (OD)</option>
+                      <option value="Both Eyes (OU)">Both Eyes (OU)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Screening Protocols Note -->
+                <div class="cqa-callout mt-4 p-3 rounded">
+                  <div class="cqa-header">
+                    <i class="bi bi-shield-check text-success"></i>
+                    <span>Clinical Quality Assurance</span>
+                  </div>
+                  <p class="cqa-text">
+                    Patient demographics are incorporated into the official diagnostic PDF report alongside automated
+                    ResNet-50 predictions. All patient metadata remains secure and encrypted.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Submission Button Container -->
+              <div class="mt-4">
+                <button type="submit" id="submitBtn" class="btn btn-primary-custom" disabled>
+                  <span id="btnIcon"><i class="bi bi-lightning-charge-fill me-1"></i></span>
+                  <span id="btnText">Analyse Retinal Scan</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </form>
+    </section>
+
+    <!-- Diagnosis Results Section (Initially Hidden) -->
+    <section id="resultsSection" class="mb-5" aria-live="polite">
+      <div class="card-header-clean mb-4">
+        <div>
+          <h2 class="results-main-title">
+            <i class="bi bi-clipboard2-pulse text-info"></i>
+            <span>Automated Diagnostic Evaluation</span>
+          </h2>
+          <div class="results-subtitle">Generated via ResNet-50 transfer learning classifier with confidence scoring
+          </div>
+        </div>
+        <div>
+          <button type="button" id="resetBtn" class="btn btn-sm btn-secondary-custom">
+            <i class="bi bi-arrow-clockwise me-1"></i> New Screening
+          </button>
+        </div>
+      </div>
+
+      <div class="row g-4">
+
+        <!-- Left Column: Patient Profile & Examined Scan Thumbnail -->
+        <div class="col-lg-5">
+          <!-- Patient Summary Card -->
+          <div class="custom-card mb-4">
+            <h5 class="fw-bold mb-3 text-light d-flex align-items-center">
+              <i class="bi bi-person-badge text-info me-2"></i> Patient Information
+            </h5>
+            <div class="patient-summary-card">
+              <div class="patient-info-row">
+                <span>Full Name:</span>
+                <span id="resPatientName">John Doe</span>
+              </div>
+              <div class="patient-info-row">
+                <span>Age:</span>
+                <span id="resPatientAge">54 Years</span>
+              </div>
+              <div class="patient-info-row">
+                <span>Gender:</span>
+                <span id="resPatientGender">Male</span>
+              </div>
+              <div class="patient-info-row">
+                <span>Eye Examined:</span>
+                <span id="resPatientEye" class="text-info">Right Eye (OD)</span>
+              </div>
+              <div class="patient-info-row">
+                <span>Assessment Date:</span>
+                <span id="resTimestamp">2026-09-23 21:30</span>
+              </div>
+            </div>
+
+            <!-- Examined Scan Display -->
+            <div class="text-center mt-3">
+              <div class="small mb-2 text-start" style="color: var(--text-secondary);"><i
+                  class="bi bi-eye-fill me-1 text-info"></i> Analyzed Retinal Fundus Scan:</div>
+              <div class="position-relative d-inline-block w-100 rounded overflow-hidden"
+                style="border: 1px solid var(--border-color); background: #07090e;">
+                <img id="resScanImage" class="img-fluid"
+                  style="max-height: 220px; object-fit: contain; width: 100%; background: #000;"
+                  alt="Analyzed Fundus Scan">
+                <span id="resOverlayBadge" class="position-absolute top-0 end-0 m-2 badge bg-success">Screened</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Model Details Card -->
+          <div class="custom-card">
+            <h6 class="fw-bold text-light mb-3 d-flex align-items-center">
+              <i class="bi bi-cpu text-info me-2 fs-5"></i> Model Specifications
+            </h6>
+            <ul class="model-spec-list">
+              <li>
+                <span class="spec-label">Base Architecture:</span>
+                <span class="spec-value">ResNet-50 (Transfer Learning)</span>
+              </li>
+              <li>
+                <span class="spec-label">Validation Accuracy:</span>
+                <span class="spec-value text-success">87.5%</span>
+              </li>
+              <li>
+                <span class="spec-label">Testing Accuracy:</span>
+                <span class="spec-value text-info">87.3%</span>
+              </li>
+              <li>
+                <span class="spec-label">Inference Engine:</span>
+                <span id="resModelSource" class="spec-value text-cyan">ResNet-50 (resnet50_model.keras)</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Right Column: Primary Prediction, Probabilities, Recommendations & Actions -->
+        <div class="col-lg-7">
+          <div class="custom-card">
+
+            <!-- Primary Diagnosis Banner -->
+            <div id="resultHeroBox" class="result-hero-box normal">
+              <div class="diag-title-row">
+                <div>
+                  <span class="small text-uppercase fw-bold text-muted d-block mb-1">Primary Diagnosis</span>
+                  <h3 id="resPrediction" class="diag-name text-success">Normal Retinal Pattern</h3>
+                </div>
+                <div class="text-end">
+                  <span id="resConfidence" class="confidence-badge text-success">
+                    <i class="bi bi-check-circle-fill"></i> 94.2% Confidence
+                  </span>
+                </div>
+              </div>
+              <div class="small text-muted mt-2 d-flex align-items-center justify-content-between">
+                <span>Status: <strong id="resSeverity" class="text-light">Routine / Clear</strong></span>
+                <span>Follow-up: <strong id="resFollowUp" class="text-info">Annual routine check-up</strong></span>
+              </div>
+            </div>
+
+            <!-- 4-Class Probability Breakdown -->
+            <h5 class="fw-bold text-light mb-3 d-flex align-items-center">
+              <i class="bi bi-diagram-3 text-info me-2"></i> Retinal Pathology Probability Breakdown
+            </h5>
+
+            <!-- 1. Diabetic Retinopathy -->
+            <div class="prob-item">
+              <div class="prob-header">
+                <span class="prob-label">
+                  <i class="bi bi-circle-fill text-danger small"></i> Diabetic Retinopathy
+                </span>
+                <span id="valDR" class="prob-val text-danger">0.0%</span>
+              </div>
+              <div class="progress-custom">
+                <div id="barDR" class="progress-bar-custom bar-dr" role="progressbar" aria-valuenow="0"
+                  aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+
+            <!-- 2. Glaucoma -->
+            <div class="prob-item">
+              <div class="prob-header">
+                <span class="prob-label">
+                  <i class="bi bi-circle-fill text-warning small"></i> Glaucoma
+                </span>
+                <span id="valGlaucoma" class="prob-val text-warning">0.0%</span>
+              </div>
+              <div class="progress-custom">
+                <div id="barGlaucoma" class="progress-bar-custom bar-glaucoma" role="progressbar" aria-valuenow="0"
+                  aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+
+            <!-- 3. Cataract -->
+            <div class="prob-item">
+              <div class="prob-header">
+                <span class="prob-label">
+                  <i class="bi bi-circle-fill text-info small"></i> Cataract
+                </span>
+                <span id="valCataract" class="prob-val text-info">0.0%</span>
+              </div>
+              <div class="progress-custom">
+                <div id="barCataract" class="progress-bar-custom bar-cataract" role="progressbar" aria-valuenow="0"
+                  aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+
+            <!-- 4. Normal -->
+            <div class="prob-item">
+              <div class="prob-header">
+                <span class="prob-label">
+                  <i class="bi bi-circle-fill text-success small"></i> Normal Fundus
+                </span>
+                <span id="valNormal" class="prob-val text-success">0.0%</span>
+              </div>
+              <div class="progress-custom">
+                <div id="barNormal" class="progress-bar-custom bar-normal" role="progressbar" aria-valuenow="0"
+                  aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+
+            <!-- Dynamic Clinical Recommendation Box -->
+            <div class="recommendation-box">
+              <div class="rec-header">
+                <i class="bi bi-heart-pulse-fill"></i> Clinical Recommendation & Action Protocol
+              </div>
+              <div id="resRecommendation" class="rec-text">
+                No significant retinal or optic disc anomalies detected. Recommend maintaining routine annual preventive
+                ophthalmic screenings and general cardiovascular health surveillance.
+              </div>
+              <div class="rec-meta-row">
+                <span><i class="bi bi-shield-exclamation me-1 text-warning"></i> AI Screening Triaging Protocol</span>
+                <span><i class="bi bi-hospital me-1 text-info"></i> Requires Ophthalmologist Verification</span>
+              </div>
+            </div>
+
+            <!-- PDF Download & Action Buttons -->
+            <div class="mt-4 d-flex flex-column flex-sm-row gap-3">
+              <button type="button" id="downloadPdfBtn" class="btn btn-primary-custom flex-grow-1">
+                <span id="pdfBtnIcon"><i class="bi bi-file-earmark-pdf-fill me-1"></i></span>
+                <span id="pdfBtnText">Download Official PDF Report</span>
+              </button>
+              <button type="button" id="newScreeningBtn" class="btn btn-secondary-custom">
+                <i class="bi bi-plus-circle me-1"></i> Screen Another
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Pathologies Information Section -->
+    <section id="clinicalConditions" class="specs-section">
+      <div class="text-center mb-5">
+        <h2 class="fw-bold mb-2 text-light">Target Retinal Pathologies</h2>
+        <p class="section-subtitle">VisionAI is engineered to screen for the leading causes of preventable blindness
+          worldwide.</p>
+      </div>
+
+      <div class="row g-4">
+        <!-- DR -->
+        <div class="col-md-6 col-lg-3">
+          <div class="spec-card">
+            <div class="spec-icon text-danger"><i class="bi bi-activity"></i></div>
+            <h5>Diabetic Retinopathy</h5>
+            <p>Vascular damage to retinal microcirculation characterized by microaneurysms, hemorrhages, cotton-wool
+              spots, and hard exudates.</p>
+          </div>
+        </div>
+        <!-- Glaucoma -->
+        <div class="col-md-6 col-lg-3">
+          <div class="spec-card">
+            <div class="spec-icon text-warning"><i class="bi bi-eye"></i></div>
+            <h5>Glaucoma</h5>
+            <p>Progressive optic neuropathy causing characteristic excavation of the optic disc, cup-to-disc ratio
+              enlargement, and visual field loss.</p>
+          </div>
+        </div>
+        <!-- Cataract -->
+        <div class="col-md-6 col-lg-3">
+          <div class="spec-card">
+            <div class="spec-icon text-info"><i class="bi bi-brightness-high"></i></div>
+            <h5>Cataract</h5>
+            <p>Opacification of the natural crystalline lens leading to light scattering, visual blurring, and altered
+              retinal fundus illumination.</p>
+          </div>
+        </div>
+        <!-- Normal -->
+        <div class="col-md-6 col-lg-3">
+          <div class="spec-card">
+            <div class="spec-icon text-success"><i class="bi bi-check-circle"></i></div>
+            <h5>Normal Fundus</h5>
+            <p>Healthy retinal vasculature with distinct optic cup margins, uniform macular pigment, and absence of
+              lesions or vascular anomalies.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model Metrics Section -->
+    <section id="modelMetrics" class="specs-section">
+      <div class="row align-items-center g-4">
+        <div class="col-lg-6">
+          <div class="hero-pill mb-3">
+            <i class="bi bi-cpu-fill me-1"></i> ResNet-50 Residual Architecture
+          </div>
+          <h2 class="fw-bold mb-3 text-light">Trained on High-Resolution Color Fundus Photography</h2>
+          <p class="metrics-desc mb-4">
+            The VisionAI model leverages deep residual learning with skip connections to overcome vanishing gradients in
+            deep networks. Pre-trained on ImageNet and fine-tuned specifically on curated multi-class ophthalmic
+            datasets with standardized data augmentation.
+          </p>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="metric-stat-card">
+              <div class="fs-3 fw-bold text-success">87.5%</div>
+              <div class="metric-stat-label">Validation Accuracy</div>
+            </div>
+            <div class="metric-stat-card">
+              <div class="fs-3 fw-bold text-info">87.3%</div>
+              <div class="metric-stat-label">Testing Accuracy</div>
+            </div>
+            <div class="metric-stat-card">
+              <div class="fs-3 fw-bold text-warning">224×224</div>
+              <div class="metric-stat-label">Input Resolution</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="custom-card">
+            <h5 class="fw-bold mb-3 text-light d-flex align-items-center">
+              <i class="bi bi-layers text-cyan me-2 fs-5"></i> Deep Learning Pipeline Architecture
+            </h5>
+            <div class="d-flex flex-column gap-3">
+              <div class="pipeline-step">
+                <span class="pipeline-badge bg-primary">1</span>
+                <div class="pipeline-content">
+                  <div class="pipeline-title">Input Preprocessing</div>
+                  <div class="pipeline-desc">OpenCV BGR-to-RGB conversion, bilinear 224×224 resizing, [0, 255] float
+                    scaling & ImageNet alignment</div>
+                </div>
+              </div>
+              <div class="pipeline-step">
+                <span class="pipeline-badge bg-info">2</span>
+                <div class="pipeline-content">
+                  <div class="pipeline-title">ResNet-50 Feature Extraction</div>
+                  <div class="pipeline-desc">Residual bottleneck blocks extracting deep spatial vascular & optic disc
+                    features</div>
+                </div>
+              </div>
+              <div class="pipeline-step">
+                <span class="pipeline-badge bg-warning">3</span>
+                <div class="pipeline-content">
+                  <div class="pipeline-title">Classification Head & Softmax</div>
+                  <div class="pipeline-desc">Global Average Pooling, Dropout (0.5), Dense 4-unit Softmax activation
+                  </div>
+                </div>
+              </div>
+              <div class="pipeline-step">
+                <span class="pipeline-badge bg-success">4</span>
+                <div class="pipeline-content">
+                  <div class="pipeline-title">Automated Clinical Report (FPDF)</div>
+                  <div class="pipeline-desc">Real-time PDF compilation containing patient demographics, probability
+                    matrix, and referral disclaimers</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer text-center">
+    <div class="container-xl">
+      <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+        <span class="fs-5">👁️</span>
+        <strong class="text-light">VisionAI</strong>
+        <span class="text-muted">| Final Year Project (FYP)</span>
+      </div>
+      <p class="footer-disclaimer">
+        DISCLAIMER: VisionAI is an academic demonstration and research tool developed for automated retinal screening
+        and triaging. It is not approved as an independent medical device. Clinical diagnosis, management, and treatment
+        decisions must always be confirmed by a qualified healthcare professional or licensed ophthalmologist.
+      </p>
+      <div class="text-muted small mt-3">
+        &copy; 2026 VisionAI Project. Powered by ResNet-50, Flask, OpenCV & FPDF.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap 5 JS Bundle CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+
+  <!-- Main Application Script -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
