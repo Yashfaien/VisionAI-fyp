@@ -1,0 +1,1 @@
+web: gunicorn vision_ai_project.app:app
