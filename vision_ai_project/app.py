@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify, render_template, send_file
 import numpy as np
 import cv2
 from fpdf import FPDF
+from pymongo import MongoClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -22,6 +23,25 @@ logger = logging.getLogger("VisionAI")
 # Initialize Flask application
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max image upload size
+
+# --------------------------------------------------------------------------
+# MongoDB Atlas Database Connection
+# --------------------------------------------------------------------------
+MONGO_URI = os.environ.get(
+    "MONGO_URI",
+    "mongodb+srv://yashfaien123_db_user:3Hfqa4kqalNtrJVd@cluster0.moqbfsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+)
+
+try:
+    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    db = mongo_client["vision_ai_db"]
+    screenings_col = db["screenings"]
+    # Verify connection ping
+    mongo_client.admin.command('ping')
+    logger.info("Successfully connected to MongoDB Atlas!")
+except Exception as e:
+    logger.warning(f"MongoDB connection unconfigured or failed: {e}")
+    screenings_col = None
 
 # Target Medical Classes (alphabetical order matching trained Keras dataset)
 CLASS_NAMES = ["Cataract", "Diabetic Retinopathy", "Glaucoma", "Normal"]
@@ -584,6 +604,26 @@ def predict():
             },
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+
+        # Save screening record to MongoDB Atlas (if connected)
+        if screenings_col is not None:
+            try:
+                db_record = {
+                    "patient_name": patient_name,
+                    "patient_age": patient_age,
+                    "patient_gender": patient_gender,
+                    "patient_eye": patient_eye,
+                    "prediction": prediction,
+                    "confidence": confidence,
+                    "probabilities": probabilities,
+                    "severity": recommendation_info["severity"],
+                    "model_source": model_source,
+                    "timestamp": datetime.now()
+                }
+                screenings_col.insert_one(db_record)
+                logger.info(f"Saved screening record for patient: {patient_name}")
+            except Exception as db_err:
+                logger.error(f"Failed to save record to MongoDB: {db_err}")
 
         return jsonify(response_payload)
 

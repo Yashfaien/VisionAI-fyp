@@ -5,6 +5,8 @@ opencv-python>=4.8.0
 numpy>=1.24.0
 Pillow>=10.0.0
 Werkzeug>=3.0.0
+pymongo>=4.6.0
+dnspython>=2.4.0
 
 # Optional Machine Learning dependencies (for loading real ResNet-50 weights):
 # tensorflow>=2.15.0
