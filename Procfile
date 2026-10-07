@@ -1,1 +1,1 @@
-web: gunicorn vision_ai_project.app:app
+web: gunicorn --bind 0.0.0.0:$PORT vision_ai_project.app:app
