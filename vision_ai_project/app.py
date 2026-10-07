@@ -80,50 +80,43 @@ RECOMMENDATIONS = {
 model = None
 model_source = "Unloaded"
 
+import os
+import logging
+
+# Ensure logging is configured
+logger = logging.getLogger(__name__)
+
 def load_resnet_model():
-    """
-    Attempts to load a trained ResNet-50 model from .keras or .h5 files.
-    Falls back gracefully to an intelligent heuristic simulation engine if absent.
-    """
     global model, model_source
 
-    candidate_files = [
-        os.path.join(os.path.dirname(__file__), "resnet50_model.keras"),
-        os.path.join(os.path.dirname(__file__), "resnet50_model.h5"),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "resnet50_model.keras"),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "resnet50_model.h5"),
-        os.path.join(os.path.dirname(__file__), "model", "resnet50_model.keras"),
-        os.path.join(os.path.dirname(__file__), "model", "resnet50_model.h5"),
-        "resnet50_model.keras",
-        "resnet50_model.h5"
-    ]
+    # Determine absolute path to resnet50_model.keras in the root directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.abspath(os.path.join(base_dir, "..", "resnet50_model.keras"))
 
-    for model_path in candidate_files:
-        if os.path.exists(model_path):
-            try:
-                try:
-                    import keras
-                    logger.info(f"Loading trained ResNet-50 model via Keras from: {model_path}")
-                    model = keras.models.load_model(model_path)
-                except ImportError:
-                    import tensorflow as tf
-                    logger.info(f"Loading trained ResNet-50 model via TensorFlow from: {model_path}")
-                    model = tf.keras.models.load_model(model_path)
-                model_source = f"ResNet-50 ({os.path.basename(model_path)})"
-                logger.info("Successfully loaded Keras ResNet-50 model.")
-                return
-            except Exception as e:
-                logger.warning(f"Found model file at {model_path} but failed to load: {e}")
+    # Check if model file is missing or is just a small Git LFS pointer text file (< 1 MB)
+    if not os.path.exists(model_path) or os.path.getsize(model_path) < 1024 * 1024:
+        logger.info("[VisionAI] Model file missing or Git LFS pointer detected. Downloading full ResNet-50 weights from Google Drive...")
+        try:
+            import gdown
+            file_id = "1N688mZR8897yXOxqwPddic51xXqoMkUL"
+            url = f"https://drive.google.com/uc?id={file_id}"
+            
+            # Download file directly to model_path
+            gdown.download(url, model_path, quiet=False)
+            logger.info("[VisionAI] Download complete!")
+        except Exception as dl_err:
+            logger.error(f"[VisionAI Error] Cloud model download failed: {dl_err}")
 
-    logger.warning(
-        "\n========================================================================\n"
-        "[VisionAI Warning] Pre-trained ResNet-50 model file (resnet50_model.keras/h5) not found.\n"
-        "Initializing intelligent heuristic inference engine for testing and live demonstration.\n"
-        "To use a real weights file, place 'resnet50_model.keras' in the project directory.\n"
-        "========================================================================"
-    )
-    model = None
-    model_source = "ResNet-50 Fine-Tuned (Simulated Heuristic Inference Engine)"
+    # Load the model with TensorFlow/Keras once downloaded
+    if os.path.exists(model_path) and os.path.getsize(model_path) > 1024 * 1024:
+        try:
+            import tensorflow as tf
+            model = tf.keras.models.load_model(model_path)
+            model_source = "ResNet-50 (Trained Weights)"
+            logger.info("[VisionAI] Successfully loaded Keras ResNet-50 model.")
+            return model
+        except Exception as e:
+            logger.warning(f"[VisionAI Warning] Failed to load Keras model: {e}")
 
 # Call loader on startup
 load_resnet_model()
