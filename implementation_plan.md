@@ -61,7 +61,7 @@ vision-ai-frontend/
 - **Hero Section**: Introduces the AI screening platform, highlighting ResNet-50 specs (87.5% Val Acc, 87.3% Test Acc) and the 4 target retinal pathologies.
 - **Two-Step Diagnostic Workflow Container**:
   - **Step 1 (Image Upload)**: Drag-and-drop dropzone with file picker (`#imageInput`), format requirements (JPG/PNG), and interactive image preview thumbnail with file size and remove action.
-  - **Step 2 (Patient Information)**: Full Name, Age, Gender dropdown (Male, Female, Other), Eye Examined dropdown (Left Eye, Right Eye, Both Eyes), and "Analyse Image" button with loading state.
+  - **Step 2 (Patient Information)**: Full Name, Age, Gender dropdown (Male, Female, Other), Eye Examined dropdown (Left Eye, Right Eye), and "Analyse Image" button with loading state.
 - **Diagnostic Results Section** (hidden initially, smoothly revealed post-analysis):
   - Patient Summary card & fundus preview thumbnail.
   - Predicted class badge with color coding and confidence percentage.
