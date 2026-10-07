@@ -15,5 +15,5 @@ numpy>=1.24.0
 pymongo>=4.6.0
 dnspython>=2.4.0
 
-# Optional Machine Learning dependencies (for loading real ResNet-50 weights):
-# tensorflow>=2.15.0
+# Deep Learning Framework (Required to load resnet50_model.keras)
+tensorflow>=2.15.0
