@@ -21,5 +21,5 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 # Copy project files
 COPY --chown=user . .
 
-# Start Flask via Gunicorn using Render's dynamic $PORT (default 10000)
-CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT:-10000} --workers 1 --threads 2 --timeout 180 app:app"]
+# Start Flask via Gunicorn inside vision_ai_project using Render's dynamic $PORT
+CMD ["sh", "-c", "gunicorn --chdir vision_ai_project -b 0.0.0.0:${PORT:-10000} --workers 1 --threads 2 --timeout 180 app:app"]
