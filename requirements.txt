@@ -18,5 +18,5 @@ dnspython>=2.4.0
 # Cloud Model Downloader
 gdown>=5.1.0
 
-# Lightweight CPU TensorFlow for Web Servers
-tensorflow-cpu>=2.15.0
+# Lightweight LiteRT (TFLite) Runtime for 512 MB RAM Servers
+ai-edge-litert>=2.0.0

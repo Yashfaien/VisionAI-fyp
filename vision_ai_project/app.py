@@ -77,46 +77,42 @@ RECOMMENDATIONS = {
 # --------------------------------------------------------------------------
 # Model Loading & Fallback Routine
 # --------------------------------------------------------------------------
-model = None
+interpreter = None
+input_details = None
+output_details = None
 model_source = "Unloaded"
 
-import os
-import logging
-
-# Ensure logging is configured
-logger = logging.getLogger(__name__)
-
 def load_resnet_model():
-    global model, model_source
+    global interpreter, input_details, output_details, model_source
 
-    # Determine absolute path to resnet50_model.keras in the root directory
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.abspath(os.path.join(base_dir, "..", "resnet50_model.keras"))
+    model_path = os.path.join(base_dir, "resnet50_model.tflite")
 
-    # Check if model file is missing or is just a small Git LFS pointer text file (< 1 MB)
+    # Download .tflite model from Google Drive if missing (< 1 MB)
     if not os.path.exists(model_path) or os.path.getsize(model_path) < 1024 * 1024:
-        logger.info("[VisionAI] Model file missing or Git LFS pointer detected. Downloading full ResNet-50 weights from Google Drive...")
+        logger.info("[VisionAI] Downloading lightweight ResNet-50 TFLite weights from Google Drive...")
         try:
             import gdown
-            file_id = "1N688mZR8897yXOxqwPddic51xXqoMkUL"
+            file_id = os.environ.get("TFLITE_MODEL_ID", "1ynwC0LUntuDinqAtsvSMs3Cxn_zXTfTS")
             url = f"https://drive.google.com/uc?id={file_id}"
-            
-            # Download file directly to model_path
             gdown.download(url, model_path, quiet=False)
-            logger.info("[VisionAI] Download complete!")
+            logger.info("[VisionAI] TFLite download complete!")
         except Exception as dl_err:
             logger.error(f"[VisionAI Error] Cloud model download failed: {dl_err}")
 
-    # Load the model with TensorFlow/Keras once downloaded
+    # Load model using Google AI Edge LiteRT Interpreter (~180 MB RAM footprint)
     if os.path.exists(model_path) and os.path.getsize(model_path) > 1024 * 1024:
         try:
-            import tensorflow as tf
-            model = tf.keras.models.load_model(model_path)
-            model_source = "ResNet-50 (Trained Weights)"
-            logger.info("[VisionAI] Successfully loaded Keras ResNet-50 model.")
-            return model
+            from ai_edge_litert.interpreter import Interpreter
+            interpreter = Interpreter(model_path=model_path)
+            interpreter.allocate_tensors()
+            input_details = interpreter.get_input_details()
+            output_details = interpreter.get_output_details()
+            model_source = "ResNet-50 (LiteRT / TFLite)"
+            logger.info("[VisionAI] Successfully loaded LiteRT ResNet-50 model.")
+            return interpreter
         except Exception as e:
-            logger.warning(f"[VisionAI Warning] Failed to load Keras model: {e}")
+            logger.warning(f"[VisionAI Warning] Failed to load TFLite model: {e}")
 
 # Call loader on startup
 load_resnet_model()
@@ -554,14 +550,15 @@ def predict():
         image_batch, image_rgb, file_bytes = preprocess_image(file)
 
         # Run Inference
-        if model is not None:
-            raw_predictions = model.predict(image_batch)[0]
+        if interpreter is not None:
+            interpreter.set_tensor(input_details[0]["index"], image_batch.astype(np.float32))
+            interpreter.invoke()
+            raw_predictions = interpreter.get_tensor(output_details[0]["index"])[0]
             probs_array = np.array(raw_predictions, dtype=float)
-            # Ensure softmax probabilities sum to 100
-            probs_array = (probs_array / np.sum(probs_array))
+            probs_array = probs_array / np.sum(probs_array)
         else:
             probs_array = heuristic_inference(image_batch, file_bytes)
-
+            
         # Map to class names and convert to percentages
         probabilities = {}
         for idx, cls_name in enumerate(CLASS_NAMES):
